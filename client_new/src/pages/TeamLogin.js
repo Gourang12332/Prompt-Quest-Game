@@ -169,7 +169,7 @@ const TeamLogin = () => {
   
   // Password game state
   const [password, setPassword] = useState("");
-  const [seen, setSeen] = useState(15);
+  const [seen, setSeen] = useState(1);
   const [gameCompleted, setGameCompleted] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);

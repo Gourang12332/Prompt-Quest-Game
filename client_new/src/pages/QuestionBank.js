@@ -84,7 +84,7 @@ const QUESTION_BANK = [
       "category": "Easy",
       "cost": 50,
       "question": "11 : 25 :: 15 : 49 :: 19 : 81 find for 25: ? .",
-      "answer": "121",
+      "answer": "144",
       "attempts": 2,
       "image": null
   },
@@ -255,7 +255,7 @@ const QUESTION_BANK = [
       "id": 28,
       "category": "Medium",
       "cost": 100,
-      "question": "20",
+      "question": "Count number of triangles",
       "answer": "20",
       "attempts": 3,
       "image": "/images/question28.jpg"
@@ -264,7 +264,7 @@ const QUESTION_BANK = [
       "id": 29,
       "category": "Medium",
       "cost": 100,
-      "question": "A",
+      "question": "Find odd one out",
       "answer": "a",
       "attempts": 3,
       "image": "/images/question29.jpg"
