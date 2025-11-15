@@ -2,28 +2,160 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createTeam, updateTeamPoints } from '../utils/api';
 
-// Password game questions - 16 questions with some images
-const PASSWORD_QUESTIONS = [
-  { id: 1, question: 'First letter of the alphabet?', answer: 'A', image: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=300&fit=crop' },
-  { id: 2, question: 'Second letter of the alphabet?', answer: 'B', image: null },
-  { id: 3, question: 'Third letter of the alphabet?', answer: 'C', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop' },
-  { id: 4, question: 'Fourth letter of the alphabet?', answer: 'D', image: null },
-  { id: 5, question: 'Fifth letter of the alphabet?', answer: 'E', image: null },
-  { id: 6, question: 'Sixth letter of the alphabet?', answer: 'F', image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop' },
-  { id: 7, question: 'Seventh letter of the alphabet?', answer: 'G', image: null },
-  { id: 8, question: 'Eighth letter of the alphabet?', answer: 'H', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop' },
-  { id: 9, question: 'Ninth letter of the alphabet?', answer: 'I', image: null },
-  { id: 10, question: 'Tenth letter of the alphabet?', answer: 'J', image: null },
-  { id: 11, question: 'Eleventh letter of the alphabet?', answer: 'K', image: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&h=300&fit=crop' },
-  { id: 12, question: 'Twelfth letter of the alphabet?', answer: 'L', image: null },
-  { id: 13, question: 'Thirteenth letter of the alphabet?', answer: 'M', image: 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=400&h=300&fit=crop' },
-  { id: 14, question: 'Fourteenth letter of the alphabet?', answer: 'N', image: null },
-  { id: 15, question: 'Fifteenth letter of the alphabet?', answer: 'O', image: null },
-  { id: 16, question: 'Sixteenth letter of the alphabet?', answer: 'P', image: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop' },
-];
+// Helper function to convert number to Roman numeral
+function numberToRoman(num) {
+  if (num === 0) return ""; // zero times → empty string requirement
+  const map = [
+    [1000, "M"],
+    [900, "CM"],
+    [500, "D"],
+    [400, "CD"],
+    [100, "C"],
+    [90, "XC"],
+    [50, "L"],
+    [40, "XL"],
+    [10, "X"],
+    [9, "IX"],
+    [5, "V"],
+    [4, "IV"],
+    [1, "I"],
+  ];
+  let res = "";
+  for (const [value, numeral] of map) {
+    while (num >= value) {
+      res += numeral;
+      num -= value;
+    }
+  }
+  return res;
+}
 
-// Final password (hardcoded in frontend)
-const FINAL_PASSWORD = 'ABCDEFGHIJKLMNOP';
+// Password game rules
+const rules = [
+  {
+    id: 1,
+    description: "Password must be at least 5 characters long.",
+    validate: (pw) => pw.length >= 5,
+  },
+  {
+    id: 2,
+    description: "Password must include at least one number",
+    validate: (pw) => /\d/.test(pw),
+  },
+  {
+    id: 3,
+    description: "Password must include one uppercase letter",
+    validate: (pw) => /[A-Z]/.test(pw),
+  },
+  {
+    id: 4,
+    description: "Password must include a special character",
+    validate: (pw) => /[^A-Za-z0-9]/.test(pw),
+  },
+  {
+    id: 5,
+    description: "Password must the number of featured posts on our linkedin page",
+    validate: (pw) => pw.includes("2"),
+  },
+  {
+    id: 6,
+    description: "Sum of all the digits in the password must be 11",
+    validate: (pw) => {
+      const digits = pw.match(/\d/g);
+      if (!digits) return false;
+      const sum = digits.reduce((a, b) => a + Number(b), 0);
+      return sum === 11;
+    },
+  },
+  {
+    id: 7,
+    description: 'Your password must include the output of the following:\nint main() {\n\tchar s[] = "geeksforgeeks";\n\tprintf("%c%c%c\\n", s[0], s[5], s[8]);\n\treturn 0;\n}',
+    validate: (pw) => pw.toLowerCase().includes("gfg"),
+  },
+  {
+    id: 8,
+    description: "The password includes the inauguration year of the college",
+    validate: (pw) => pw.includes("2013"),
+  },
+  {
+    id: 9,
+    description: (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <span>The password includes the word written here:</span>
+        <img
+          src="/images/q9.jpg"
+          alt="Question 9"
+          style={{ width: '384px', maxWidth: '100%', height: '192px', objectFit: 'contain', borderRadius: '0.75rem', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
+          onError={(e) => {
+            e.target.style.display = 'none';
+          }}
+        />
+      </div>
+    ),
+    validate: (pw) => pw.toLowerCase().includes("glow"),
+  },
+  {
+    id: 10,
+    description: "The password includes the answer to the riddle on our instagram story",
+    validate: (pw) => pw.toLowerCase().includes("campusmantri"),
+  },
+  {
+    id: 11,
+    description: (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <span>The password includes the pokemon shown here:</span>
+        <img
+          src="/images/q11.jpg"
+          alt="Question 11"
+          style={{ width: '384px', maxWidth: '100%', height: '192px', objectFit: 'contain', borderRadius: '0.75rem', border: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
+          onError={(e) => {
+            e.target.style.display = 'none';
+          }}
+        />
+      </div>
+    ),
+    validate: (pw) => pw.toLowerCase().includes("charmander"),
+  },
+  {
+    id: 12,
+    description: "The password includes the number of times the letter 'g' (either uppercase or lowercase) appears in your password in roman numerals",
+    validate: (pw) => {
+      // 1. Count occurrences of 'g' or 'G'
+      const count = (pw.match(/g/gi) || []).length;
+      // 2. Convert count → Roman numeral
+      const roman = numberToRoman(count);
+      // 3. Password must include that roman numeral (case-insensitive)
+      return roman && pw.includes(roman);
+    },
+  },
+  {
+    id: 13,
+    description: "The password includes the first word from the Problem Of The Day on GeeksForGeeks webpage",
+    validate: (pw) => {
+      // TODO: Get the problem of the day
+      return pw.toLowerCase().includes("minimum");
+    },
+  },
+  {
+    id: 14,
+    description: 'The password includes the output of the following:\nint a = 10;\nprintf("%d", a+++a)',
+    validate: (pw) => pw.includes("21"),
+  },
+  {
+    id: 15,
+    description: 'The password includes the number of unique letters of the alphabet(case-insensitive) that appear in your password in roman numerals',
+    validate: (pw) => {
+      // 1. Extract letters only (ignore digits/symbols)
+      const letters = pw.toLowerCase().match(/[a-z]/g) || [];
+      // 2. Count unique letters
+      const uniqueCount = new Set(letters).size;
+      // 3. Convert to Roman numeral
+      const roman = numberToRoman(uniqueCount);
+      // 4. Check if password contains that Roman numeral (case insensitive)
+      return roman && pw.includes(roman);
+    },
+  },
+];
 
 const TeamLogin = () => {
   const [teamName, setTeamName] = useState('');
@@ -36,10 +168,8 @@ const TeamLogin = () => {
   const [team, setTeam] = useState(null);
   
   // Password game state
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [passwordError, setPasswordError] = useState('');
-  const [completedQuestions, setCompletedQuestions] = useState([]);
+  const [password, setPassword] = useState("");
+  const [seen, setSeen] = useState(15);
   const [gameCompleted, setGameCompleted] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
@@ -60,6 +190,27 @@ const TeamLogin = () => {
       // Otherwise stay on login page to play password game
     }
   }, [navigate]);
+
+  // Unlock rules automatically
+  useEffect(() => {
+    if (!gameStarted || gameCompleted) return;
+    
+    const currentRule = rules[seen - 1];
+    if (currentRule && currentRule.validate(password)) {
+      if (seen < rules.length) {
+        setSeen(seen + 1);
+      }
+    }
+  }, [password, seen, gameStarted, gameCompleted]);
+
+  // Check if all rules are satisfied
+  useEffect(() => {
+    if (!gameStarted || gameCompleted) return;
+    
+    if (seen === rules.length && rules.every((r) => r.validate(password))) {
+      handleGameComplete();
+    }
+  }, [password, seen, gameStarted, gameCompleted]);
 
   const handleTimeUp = useCallback(async () => {
     if (timerRef.current) {
@@ -131,50 +282,7 @@ const TeamLogin = () => {
     }
   };
 
-  const handlePasswordInput = (e) => {
-    const value = e.target.value.toUpperCase();
-    setPasswordInput(value);
-    setPasswordError('');
-
-    // Convert to lowercase and trim for comparison (used in both conditions)
-    const normalizedInput = value.trim().toLowerCase();
-
-    if (currentQuestionIndex < PASSWORD_QUESTIONS.length) {
-      const currentQuestion = PASSWORD_QUESTIONS[currentQuestionIndex];
-      const expectedAnswer = currentQuestion.answer;
-      const normalizedExpected = expectedAnswer.trim().toLowerCase();
-      
-      // Check if the input matches the current question's answer
-      if (normalizedInput === normalizedExpected) {
-        // Correct answer - move to next question
-        setCompletedQuestions([...completedQuestions, currentQuestionIndex]);
-        setCurrentQuestionIndex(prev => prev + 1);
-        setPasswordInput('');
-        setPasswordError('');
-      } else if (normalizedInput.length >= normalizedExpected.length && normalizedInput !== normalizedExpected) {
-        // Wrong answer - show error
-        setPasswordError('Wrong answer! Try again.');
-        setTimeout(() => {
-          setPasswordInput('');
-          setPasswordError('');
-        }, 2000);
-      }
-    } else if (currentQuestionIndex === PASSWORD_QUESTIONS.length) {
-      // All questions completed, check final password
-      const normalizedFinalPassword = FINAL_PASSWORD.trim().toLowerCase();
-      if (normalizedInput === normalizedFinalPassword) {
-        handleFinalPasswordCorrect();
-      } else if (normalizedInput.length >= normalizedFinalPassword.length && normalizedInput !== normalizedFinalPassword) {
-        setPasswordError('Incorrect final password! Please check all your answers.');
-        setTimeout(() => {
-          setPasswordInput('');
-          setPasswordError('');
-        }, 3000);
-      }
-    }
-  };
-
-  const handleFinalPasswordCorrect = async () => {
+  const handleGameComplete = async () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
@@ -184,7 +292,6 @@ const TeamLogin = () => {
     
     // Calculate coins based on time taken
     const timeInSeconds = timeElapsed;
-    const maxTime = 600; // 10 minutes
     let coins = 0;
     
     if (timeInSeconds <= 300) { // 0-5 minutes
@@ -226,16 +333,27 @@ const TeamLogin = () => {
     return Math.max(0, 600 - timeElapsed);
   };
 
-  const getCurrentQuestion = () => {
-    if (currentQuestionIndex < PASSWORD_QUESTIONS.length) {
-      return PASSWORD_QUESTIONS[currentQuestionIndex];
-    }
-    return null;
-  };
+  // Only visible rules (1 → seen)
+  let visibleRules = rules.slice(0, seen);
+
+  // Sort: unsatisfied → satisfied
+  visibleRules = visibleRules.sort((a, b) => {
+    const a_ok = a.validate(password);
+    const b_ok = b.validate(password);
+    // Unsatisfied rules first
+    if (!a_ok && b_ok) return -1;
+    if (a_ok && !b_ok) return 1;
+    // Both satisfied → sort by ID descending
+    if (a_ok && b_ok) return b.id - a.id;
+    // both unsatisfied → keep original order
+    return 0;
+  });
+
+  const allRulesSatisfied = seen === rules.length && rules.every((r) => r.validate(password));
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f1f8f5', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div style={{ maxWidth: '600px', width: '100%', backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', padding: '2rem' }}>
+      <div style={{ maxWidth: '800px', width: '100%', backgroundColor: 'white', borderRadius: '0.5rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', padding: '2rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: '#0e201b', marginBottom: '0.5rem' }}>PROMPT QUEST</h1>
           <p style={{ color: '#265645' }}>Tech Club Event</p>
@@ -351,165 +469,91 @@ const TeamLogin = () => {
               <div style={{ textAlign: 'right' }}>
                 <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>Progress</p>
                 <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#00895e', margin: 0 }}>
-                  {completedQuestions.length} / {PASSWORD_QUESTIONS.length}
+                  {seen - 1} / {rules.length}
                 </p>
               </div>
             </div>
 
-            {/* Display all completed questions stacked */}
-            {completedQuestions.length > 0 && (
-              <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {completedQuestions.map((questionIdx) => {
-                  const question = PASSWORD_QUESTIONS[questionIdx];
+            {/* Password Input */}
+            <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.375rem', border: '1px solid #e5e7eb' }}>
+              <label htmlFor="password" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#4b5563', marginBottom: '0.5rem' }}>
+                Type your password...
+              </label>
+              <input
+                id="password"
+                type="text"
+                className="w-full p-3 border rounded-xl shadow-sm text-lg focus:outline-none focus:ring focus:ring-blue-300"
+                placeholder="Type your password..."
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={gameCompleted}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '0.75rem',
+                  outline: 'none',
+                  fontSize: '1.125rem',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  transition: 'border-color 0.2s, box-shadow 0.2s'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#d1d5db';
+                  e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                }}
+                autoFocus
+              />
+            </div>
+
+            {/* Rules Display */}
+            <div style={{ marginTop: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#0e201b', marginBottom: '1rem' }}>Password Rules</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {visibleRules.map((rule) => {
+                  const ok = rule.validate(password);
                   return (
-                    <div 
-                      key={question.id} 
-                      style={{ 
-                        backgroundColor: '#dcfce7', 
-                        padding: '1rem', 
-                        borderRadius: '0.375rem',
-                        border: '1px solid #22c55e'
+                    <div
+                      key={rule.id}
+                      style={{
+                        padding: '0.75rem',
+                        borderRadius: '0.75rem',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '0.75rem',
+                        border: ok ? '1px solid #22c55e' : '1px solid #ef4444',
+                        backgroundColor: ok ? '#dcfce7' : '#fee2e2',
+                        transition: 'all 0.3s ease'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: '600' }}>
-                          Question {questionIdx + 1} ✓
-                        </span>
+                      <span style={{ fontSize: '1.25rem', flexShrink: 0 }}>{ok ? "✔️" : "❌"}</span>
+                      <div style={{ color: '#1f2937', fontSize: '1rem', fontWeight: '500', whiteSpace: 'pre-wrap', flex: 1 }}>
+                        {rule.description}
                       </div>
-                      <h4 style={{ fontSize: '1rem', fontWeight: '600', color: '#0e201b', marginBottom: '0.5rem' }}>
-                        {question.question}
-                      </h4>
-                      {question.image && (
-                        <div style={{ marginBottom: '0.5rem', textAlign: 'center' }}>
-                          <img 
-                            src={question.image} 
-                            alt="Question illustration" 
-                            style={{ 
-                              maxWidth: '100%', 
-                              maxHeight: '200px', 
-                              borderRadius: '0.375rem',
-                              border: '1px solid #e5e7eb'
-                            }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                            }}
-                          />
-                        </div>
-                      )}
-                      <p style={{ fontSize: '0.875rem', color: '#166534', fontWeight: '500', margin: 0 }}>
-                        Answer: {question.answer}
-                      </p>
                     </div>
                   );
                 })}
               </div>
-            )}
+            </div>
 
-            {/* Current Question */}
-            {!gameCompleted && getCurrentQuestion() && (
-              <div style={{ backgroundColor: '#f1f8f5', padding: '1.5rem', borderRadius: '0.375rem', border: '2px solid #00895e' }}>
-                <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
-                  Question {currentQuestionIndex + 1} of {PASSWORD_QUESTIONS.length}
-                </p>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#0e201b', marginBottom: '1rem' }}>
-                  {getCurrentQuestion().question}
-                </h3>
-                
-                {getCurrentQuestion().image && (
-                  <div style={{ marginBottom: '1rem', textAlign: 'center' }}>
-                    <img 
-                      src={getCurrentQuestion().image} 
-                      alt="Question illustration" 
-                      style={{ 
-                        maxWidth: '100%', 
-                        maxHeight: '250px', 
-                        borderRadius: '0.375rem',
-                        border: '1px solid #e5e7eb'
-                      }}
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Single Password Field for all questions */}
-            {!gameCompleted && currentQuestionIndex < PASSWORD_QUESTIONS.length && (
-              <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.375rem', border: '1px solid #e5e7eb', marginTop: '1rem' }}>
-                <label htmlFor="password" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#4b5563', marginBottom: '0.5rem' }}>
-                  Enter Answer (Password Field - Use for all questions)
-                </label>
-                <input
-                  id="password"
-                  type="text"
-                  value={passwordInput}
-                  onChange={handlePasswordInput}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: passwordError ? '2px solid #ef4444' : '1px solid #d1d5db',
-                    borderRadius: '0.375rem',
-                    outline: 'none',
-                    fontSize: '1.125rem',
-                    textAlign: 'center',
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase'
-                  }}
-                  placeholder="Type your answer here"
-                  autoFocus
-                />
-                {passwordError && (
-                  <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.5rem', textAlign: 'center' }}>
-                    {passwordError}
-                  </div>
-                )}
-                <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.5rem', textAlign: 'center' }}>
-                  Answer the current question above using this field
-                </p>
-              </div>
-            )}
-
-            {/* Final Password Check */}
-            {!gameCompleted && currentQuestionIndex === PASSWORD_QUESTIONS.length && (
-              <div style={{ backgroundColor: '#d5f6e4', padding: '1.5rem', borderRadius: '0.375rem', border: '2px solid #00895e' }}>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#0e201b', marginBottom: '0.5rem', textAlign: 'center' }}>
-                  🎉 All Questions Completed!
-                </h3>
-                <p style={{ fontSize: '0.875rem', color: '#265645', marginBottom: '1rem', textAlign: 'center' }}>
-                  Enter the complete password to proceed
-                </p>
-                
-                <div>
-                  <label htmlFor="finalPassword" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#4b5563', marginBottom: '0.25rem' }}>
-                    Final Password
-                  </label>
-                  <input
-                    id="finalPassword"
-                    type="text"
-                    value={passwordInput}
-                    onChange={handlePasswordInput}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: passwordError ? '2px solid #ef4444' : '1px solid #d1d5db',
-                      borderRadius: '0.375rem',
-                      outline: 'none',
-                      fontSize: '1.125rem',
-                      textAlign: 'center',
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase'
-                    }}
-                    placeholder="Enter complete password"
-                    autoFocus
-                  />
-                  {passwordError && (
-                    <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.5rem', textAlign: 'center' }}>
-                      {passwordError}
-                    </div>
-                  )}
-                </div>
+            {/* Success Message */}
+            {allRulesSatisfied && !gameCompleted && (
+              <div
+                style={{
+                  marginTop: '1.5rem',
+                  padding: '1rem',
+                  backgroundColor: '#dcfce7',
+                  color: '#166534',
+                  borderRadius: '0.75rem',
+                  textAlign: 'center',
+                  fontWeight: '600',
+                  fontSize: '1.25rem'
+                }}
+              >
+                🎉 All rules satisfied!
               </div>
             )}
 
@@ -521,36 +565,17 @@ const TeamLogin = () => {
                 </h3>
                 <p style={{ color: '#265645', marginBottom: '1rem' }}>
                   {timeElapsed >= 600 
-                    ? 'You have been awarded 1000 default points. Redirecting to Level 0...'
-                    : `Congratulations! You completed in ${formatTime(timeElapsed)}. Redirecting to Level 0...`
+                    ? 'You have been awarded 1000 default points. Redirecting to Question Bank...'
+                    : `Congratulations! You completed in ${formatTime(timeElapsed)}. Redirecting to Question Bank...`
                   }
                 </p>
               </div>
             )}
-
-            {/* Progress Indicator */}
-            <div style={{ marginTop: '1rem' }}>
-              <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                {PASSWORD_QUESTIONS.map((q, idx) => (
-                  <div
-                    key={q.id}
-                    style={{
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      backgroundColor: completedQuestions.includes(idx) ? '#22c55e' : idx === currentQuestionIndex ? '#00895e' : '#e5e7eb',
-                      border: idx === currentQuestionIndex ? '2px solid #00895e' : 'none'
-                    }}
-                    title={`Question ${idx + 1}: ${completedQuestions.includes(idx) ? 'Completed' : idx === currentQuestionIndex ? 'Current' : 'Pending'}`}
-                  />
-                ))}
-              </div>
-            </div>
           </div>
         )}
 
         <div style={{ marginTop: '2rem', textAlign: 'center', fontSize: '0.875rem', color: '#6b7280' }}>
-          <p>15 teams competing • 15-minute levels • Real-time scoreboard</p>
+          <p>Tech Club Event • Password Challenge • Real-time scoreboard</p>
         </div>
       </div>
     </div>

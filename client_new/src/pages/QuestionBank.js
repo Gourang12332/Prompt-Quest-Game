@@ -84,7 +84,7 @@ const QUESTION_BANK = [
       "category": "Easy",
       "cost": 50,
       "question": "11 : 25 :: 15 : 49 :: 19 : 81 find for 25: ? .",
-      "answer": "144",
+      "answer": "121",
       "attempts": 2,
       "image": null
   },
