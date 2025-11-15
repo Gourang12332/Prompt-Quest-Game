@@ -1,0 +1,28 @@
+services:
+  # Backend Service
+  - type: web
+    name: prompt-quest-backend
+    env: node
+    plan: free
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGODB_URI
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+
+  # Frontend Service
+  - type: web
+    name: prompt-quest-frontend
+    env: static
+    buildCommand: cd client_new && npm install && npm run build
+    staticPublishPath: ./client_new/build
+    envVars:
+      - key: REACT_APP_API_URL
+        sync: false
+
